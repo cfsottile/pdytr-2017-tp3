@@ -52,20 +52,46 @@ servidor a partir de modificaciones en el cliente, y viceversa.
 
 ## 4
 
-Clases involucradas:
+Las clases involucradas son:
 
-* `Server`
-* `StartServer`
-* `Client`
+* `Server`: determina la operatoria del servidor de archivos.
+* `StartServer`: registra a los objetos remotos (en este caso será un solo objeto, el servidor), dejando todo listo para que sea invocado por los clientes.
+* `Client`: determina la operatoria de los clientes.
 
+Y además tenemos a la interfaz `IRemoteServer`.
 
 ## 5
 
- Para la demostracion de la concurrencia de un llamado a un metodo remoto
-comunicamos dos clientes para que invoquen al mismo metodo.  El metodo remoto
-se queda loopeando e imprimiento por pantalla quien fue el cliente que lo llamo.
+Para la demostración de la concurrencia de un llamado a un método remoto, comunicamos dos clientes para que invoquen al mismo método.  El metodo remoto se queda loopeando e imprimiendo por pantalla quién fue el cliente que lo llamo. La salida del servidor fue la siguiente:
 
-## 6a
+```
+$ java Server
+Me llego algo de: cliente 1 a la 1
+Me llego algo de: cliente 2 a la 1
+Me llego algo de: cliente 1 a la 2
+Me llego algo de: cliente 2 a la 2
+Me llego algo de: cliente 1 a la 3
+Me llego algo de: cliente 2 a la 3
+Me llego algo de: cliente 1 a la 4
+Me llego algo de: cliente 2 a la 4
+Me llego algo de: cliente 1 a la 5
+Me llego algo de: cliente 2 a la 5
+Termine con cliente 1
+Termine con cliente 2
+```
+
+RMI genera un nuevo thread para cada cliente, es así que por defecto la concurrencia es real, a diferencia de RPC en donde los llamados de clientes se atienden en forma secuencial, por lo tanto no hay concurrencia.
+
+No es apropiado para el caso del servidor, ya que dos clientes podrían invocar el método `write` con un mismo nombre de archivo, y se estaría generando un archivo que contendría a los dos archivos mezclados. Solución propuesta: separar en casos el método `write`:
+
+* en caso de que no exista el archivo, se crea, se agrega un identificador del cliente actual en un diccionario de archivos y clientes activos, y se procede a escribir los bytes recibidos;
+* en caso de que exista el archivo, se revisa si está activo:
+	* si lo está, se chequea que el cliente sea el mismo del diccionario y se procede a escribir;
+	* si no lo está, se agrega archivo-cliente al diccionario y se procede a escribir.
+
+## 6
+
+### a
 
  Para calcular el tiempo de respuesta de una invocacion a un metodo remoto, en
 el script del cliente tomamos la fecha/hora en la sentencia anterior al
@@ -86,16 +112,16 @@ llamado.
     6 ms
     6 ms
 
-  Pruebas: 10
-  Total: 52
-  Promedio: 5,2 ms
-  Desviacion Estandar: 2.04396
+*  Pruebas: 10
+*  Total: 52
+*  Promedio: 5,2 ms
+*  Desviacion Estandar: 2.04396
 
-## 6b
+### b
 
- Una de las opciones que se tiene para poder cambiar el timeout predefinido que
-tiene RMI es redefinir la configuracion del Socket que utiliza para comunicarse.
+Una de las opciones que se tiene para poder cambiar el timeout predefinido que tiene RMI es redefinir la configuracion del Socket que utiliza para comunicarse.
 Ej:
+
 ```java
 RMISocketFactory.setSocketFactory(new RMISocketFactory() {
   public Socket createSocket(String host, int port) throws IOException {
@@ -110,15 +136,16 @@ RMISocketFactory.setSocketFactory(new RMISocketFactory() {
 });
 ```
 
- Otra posible es cambiar el timeout de las respuestas a travez de las
+Otra posible es cambiar el timeout de las respuestas a travez de las
 propiedades del sistema.
 
 Ej:
+
 ```java
 System.setProperty("sun.rmi.transport.tcp.responseTimeout", "10000");
 ```
 
- Para la demostracion de esto configuramos con el ejemplo provisto
+Para la demostracion de esto configuramos con el ejemplo provisto
 anteriormente un cliente con un timeout de 2 segundos, y al servidor remoto un
 retrazo de 10 segundos. Al vencer el tiempo definido por el cliente se levanta
 una exception.

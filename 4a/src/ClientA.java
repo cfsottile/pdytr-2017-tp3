@@ -1,14 +1,13 @@
 import javafx.util.Pair;
 
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.RandomAccessFile;
 import java.rmi.Naming;
 import java.rmi.registry.Registry;
 
 import static java.lang.System.exit;
 
-public class Client {
+public class ClientA {
     static final int BUF_SIZE = 1024;
 
     public static void main(String[] args) {
